@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guess the Character 💜 — Gamer Girlfriend Quiz</title>
+    <meta name="description" content="A playful Guess the Character quiz game for couples who love gaming." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        heading: ['Outfit', 'sans-serif'],
+                        body: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        rose: { 50: '#fff1f2', 100: '#ffe4e6', 200: '#fecdd3', 300: '#fda4af', 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c', 800: '#9f1239', 900: '#881337' },
+                        violet: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        amber: { 50: '#fffbeb', 100: '#fef3c7', 200: '#fde68a', 300: '#fcd34d', 400: '#fbbf24', 500: '#f59e0b' },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* ── 3D Flip ── */
+        .card-container {
+            perspective: 900px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.7s cubic-bezier(.4, .2, .2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            inset: 0;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        .card-back {
+            z-index: 2;
+        }
+
+        .card-front {
+            transform: rotateY(180deg);
+        }
+
+        /* ── Sparkle burst on correct ── */
+        @keyframes sparkle {
+            0% {
+                transform: scale(0) rotate(0deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1.6) rotate(180deg);
+                opacity: 0;
+            }
+        }
+
+        .sparkle-burst {
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            animation: sparkle .65s ease-out forwards;
+        }
+
+        /* ── Pulse counter ── */
+        @keyframes pulse-once {
+            0% {
+                transform: scale(1);
+            }
+
+            40% {
+                transform: scale(1.25);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .pulse {
+            animation: pulse-once .35s ease;
+        }
+
+        /* ── Floating hearts background ── */
+        @keyframes floatUp {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: .7;
+            }
+
+            100% {
+                transform: translateY(-110vh) scale(.4);
+                opacity: 0;
+            }
+        }
+
+        .floating-heart {
+            position: fixed;
+            bottom: -40px;
+            font-size: 1.4rem;
+            opacity: 0;
+            pointer-events: none;
+            animation: floatUp linear infinite;
+            z-index: 0;
+        }
+
+        /* ── Card hover ── */
+        .card-container:hover .card-inner:not(.flipped) {
+            transform: translateY(-6px) scale(1.03);
+        }
+
+        /* ── Smooth reveal ── */
+        .reveal-section {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .4s ease, opacity .4s ease;
+            opacity: 0;
+        }
+
+        .reveal-section.open {
+            max-height: 300px;
+            opacity: 1;
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e1030;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #7c3aed;
+            border-radius: 4px;
+        }
+
+        /* ── Image Modal Overlay ── */
+        .image-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(10, 5, 20, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .image-modal.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .image-modal img {
+            max-width: 90vw;
+            max-height: 85vh;
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .image-modal.open img {
+            transform: scale(1);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            font-size: 2rem;
+            color: white;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            z-index: 101;
+        }
+
+        .close-modal:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body
+    class="min-h-screen bg-gradient-to-br from-[#1a0a2e] via-[#16082a] to-[#0f0618] text-white font-body relative overflow-x-hidden">
+
+    <!-- ═══════════ FLOATING HEARTS BG ═══════════ -->
+    <div id="hearts-bg" aria-hidden="true"></div>
+
+    <!-- ═══════════ STICKY HEADER ═══════════ -->
+    <header id="site-header"
+        class="sticky top-0 z-50 backdrop-blur-xl bg-[#1a0a2ecc] border-b border-violet-800/40 shadow-lg shadow-violet-900/30">
+        <div class="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3">
+            <h1
+                class="font-heading font-extrabold text-xl sm:text-2xl bg-gradient-to-r from-rose-400 via-pink-400 to-violet-400 bg-clip-text text-transparent select-none">
+                💜 Guess the Character
+            </h1>
+            <div class="flex items-center gap-3 sm:gap-5">
+                <div
+                    class="flex items-center gap-2 bg-violet-900/50 border border-violet-700/50 rounded-full px-4 py-1.5 shadow-inner">
+                    <span class="text-xs sm:text-sm text-violet-300 font-medium">Prize&nbsp;Money</span>
+                    <div class="flex flex-col items-end">
+                        <span id="bank" class="font-heading font-bold text-lg sm:text-xl text-amber-400">€0.00</span>
+                        <span id="php-conversion" class="text-[10px] text-violet-400/70 font-medium leading-none">≈ 0.00
+                            PHP</span>
+                    </div>
+                </div>
+                <button id="reset-btn" onclick="resetBank()"
+                    class="text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-full bg-rose-600/80 hover:bg-rose-500 transition-all active:scale-95 shadow-md">
+                    Reset
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════════ MAIN CONTENT ═══════════ -->
+    <main class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-14">
+
+        <!-- Intro -->
+        <section class="text-center space-y-2">
+            <p class="text-violet-300/80 text-sm sm:text-base">Flip a card, guess the character & the game they're from.
+                <span class="text-rose-400">Good luck babe! 💕</span>
+            </p>
+        </section>
+
+        <!-- === EASY === -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span
+                    class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold tracking-wider uppercase">Easy</span>
+                <span class="text-violet-400/60 text-sm">€0.50 per correct answer</span>
+            </div>
+            <div id="grid-easy" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5">
+            </div>
+        </section>
+
+        <!-- === MEDIUM === -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span
+                    class="inline-block px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold tracking-wider uppercase">Medium</span>
+                <span class="text-violet-400/60 text-sm">€0.50 per correct answer</span>
+            </div>
+            <div id="grid-medium" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5">
+            </div>
+        </section>
+
+        <!-- === HARD === -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span
+                    class="inline-block px-3 py-1 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 text-xs font-bold tracking-wider uppercase">Hard</span>
+                <span class="text-violet-400/60 text-sm">€0.50 per correct answer</span>
+            </div>
+            <div id="grid-hard" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5">
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ═══════════ FOOTER ═══════════ -->
+    <footer class="relative z-10 text-center py-8 text-violet-500/40 text-xs">
+        Made with 💜 for my Player 2
+    </footer>
+
+    <!-- ═══════════ IMAGE MODAL ═══════════ -->
+    <div id="image-modal" class="image-modal" onclick="closeModal()">
+        <span class="close-modal">&times;</span>
+        <img id="modal-img" src="" alt="Enlarged Character" onclick="event.stopPropagation()">
+    </div>
+
+    <!-- ═══════════ JAVASCRIPT ═══════════ -->
+    <script>
+        // ──────────────────── DATA ────────────────────
+        const characters = [
+            // ── EASY (id 1-10) ──
+            { id: 1, level: 'Easy', imagePlaceholder: 'images/Goomba.png', name: 'Goomba', game: 'Super Mario Bros' },
+            { id: 2, level: 'Easy', imagePlaceholder: 'images/link.png', name: 'Link', game: 'The Legend of Zelda' },
+            { id: 3, level: 'Easy', imagePlaceholder: 'images/Rayquaza.png', name: 'Rayquaza', game: 'Pokémon' },
+            { id: 4, level: 'Easy', imagePlaceholder: 'images/RougeTheBat.png', name: 'Rouge The Bat', game: 'Sonic the Hedgehog' },
+            { id: 5, level: 'Easy', imagePlaceholder: 'images/kitana.jpg', name: 'Kitana', game: 'Mortal Kombat' },
+            { id: 6, level: 'Easy', imagePlaceholder: 'images/Tom_Nook.png', name: 'Tom Nook', game: 'Animal Crossing' },
+            { id: 7, level: 'Easy', imagePlaceholder: 'images/Steve_(Minecraft).png', name: 'Steve', game: 'Minecraft' },
+            { id: 8, level: 'Easy', imagePlaceholder: 'images/lara_croft.jpg', name: 'Lara Croft', game: 'Tomb Raider' },
+            { id: 9, level: 'Easy', imagePlaceholder: 'images/Kratos.png', name: 'Kratos', game: 'God of War' },
+            { id: 10, level: 'Easy', imagePlaceholder: 'images/Spyro.png', name: 'Spyro', game: 'Spyro the Dragon' },
+
+            // ── MEDIUM (id 11-20) ──
+            { id: 11, level: 'Medium', imagePlaceholder: 'images/V.png', name: 'V', game: 'Cyberpunk 2077' },
+            { id: 12, level: 'Medium', imagePlaceholder: 'images/sans.png', name: 'Sans', game: 'Undertale' },
+            { id: 13, level: 'Medium', imagePlaceholder: 'images/Cloud_Strife.png', name: 'Cloud Strife', game: 'Final Fantasy VII' },
+            { id: 14, level: 'Medium', imagePlaceholder: 'images/samus.jpg', name: 'Samus Aran', game: 'Metroid' },
+            { id: 15, level: 'Medium', imagePlaceholder: 'images/Arthur_Morgan.png', name: 'Arthur Morgan', game: 'Red Dead Redemption 2' },
+            { id: 16, level: 'Medium', imagePlaceholder: 'images/chun_li.jpg', name: 'Chun Li', game: 'Street Fighter' },
+            { id: 17, level: 'Medium', imagePlaceholder: 'images/dizzy.jpg', name: 'Dizzy', game: 'Guilty Gear' },
+            { id: 18, level: 'Medium', imagePlaceholder: 'images/snake.png', name: 'Solid Snake', game: 'Metal Gear Solid' },
+            { id: 19, level: 'Medium', imagePlaceholder: 'images/leon_kenedy.jpg', name: 'Leon Kennedy', game: 'Resident Evil 4' },
+            { id: 20, level: 'Medium', imagePlaceholder: 'images/Acrid.png', name: 'Acrid', game: 'Risk of Rain 2' },
+
+            // ── HARD (id 21-30) ──
+            { id: 21, level: 'Hard', imagePlaceholder: 'images/2B.png', name: '2B', game: 'NieR: Automata' },
+            { id: 22, level: 'Hard', imagePlaceholder: 'images/Chell.png', name: 'Chell', game: 'Portal' },
+            { id: 23, level: 'Hard', imagePlaceholder: 'images/Hornet.png', name: 'Hornet', game: 'Hollow Knight' },
+            { id: 24, level: 'Hard', imagePlaceholder: 'images/Neco-Arc.png', name: 'Neco Arc', game: 'Melty Blood' },
+            { id: 25, level: 'Hard', imagePlaceholder: 'images/alexstrasza.jpg', name: 'Alexstrasza', game: 'World of Warcraft' },
+            { id: 26, level: 'Hard', imagePlaceholder: 'images/Agent47.png', name: 'Agent 47', game: 'Hitman' },
+            { id: 27, level: 'Hard', imagePlaceholder: 'images/peppino.png', name: 'Peppino', game: 'Pizza Tower' },
+            { id: 28, level: 'Hard', imagePlaceholder: 'images/dante.png', name: 'Dante', game: 'Devil May Cry' },
+            { id: 29, level: 'Hard', imagePlaceholder: 'images/Phoenix_Wright.png', name: 'Phoenix Wright', game: 'Ace Attorney' },
+            { id: 30, level: 'Hard', imagePlaceholder: 'images/midna.jpg', name: 'Midna', game: 'The Legend of Zelda: Twilight Princess' },
+        ];
+
+        // ──────────────────── STATE ────────────────────
+        let bank = 0;
+        const cardState = {};  // id → { flipped, nameRevealed, gameRevealed, nameScored, gameScored }
+
+        // ──────────────────── HELPERS ────────────────────
+        const $ = (sel) => document.querySelector(sel);
+        const bankEl = () => $('#bank');
+
+        const PHP_RATE = 60.50; // Approximated rate for display
+
+        function updateBank(amount) {
+            bank += amount;
+            const bankEl = $('#bank');
+            const phpEl = $('#php-conversion');
+
+            bankEl.textContent = `€${bank.toFixed(2)}`;
+            phpEl.textContent = `≈ ${(bank * PHP_RATE).toFixed(2)} PHP`;
+
+            bankEl.classList.remove('pulse');
+            void bankEl.offsetWidth;          // reflow
+            bankEl.classList.add('pulse');
+        }
+
+        function resetBank() {
+            bank = 0;
+            $('#bank').textContent = '€0.00';
+            $('#php-conversion').textContent = '≈ 0.00 PHP';
+            // Reset all card states visually
+            Object.keys(cardState).forEach(id => {
+                const s = cardState[id];
+                s.flipped = false;
+                s.nameRevealed = false;
+                s.gameRevealed = false;
+                s.nameScored = false;
+                s.gameScored = false;
+                const container = document.getElementById(`card-${id}`);
+                if (container) {
+                    container.querySelector('.card-inner').classList.remove('flipped');
+                    // Re-render the front content
+                    renderFront(Number(id));
+                }
+            });
+        }
+
+        // ──────────────────── LEVEL COLORS ────────────────────
+        const levelTheme = {
+            Easy: { bg: 'from-emerald-600/80 to-teal-700/80', border: 'border-emerald-400/30', accent: 'text-emerald-300', pattern: '🃏', badge: 'bg-emerald-500/30 text-emerald-200' },
+            Medium: { bg: 'from-amber-600/80 to-orange-700/80', border: 'border-amber-400/30', accent: 'text-amber-300', pattern: '🂠', badge: 'bg-amber-500/30 text-amber-200' },
+            Hard: { bg: 'from-rose-600/80 to-red-800/80', border: 'border-rose-400/30', accent: 'text-rose-300', pattern: '🎴', badge: 'bg-rose-500/30 text-rose-200' },
+        };
+
+        // ──────────────────── RENDER FRONT (dynamic content) ────────────────────
+        function renderFront(id) {
+            const ch = characters.find(c => c.id === id);
+            const state = cardState[id];
+            const frontEl = document.getElementById(`front-${id}`);
+            if (!frontEl) return;
+
+            const theme = levelTheme[ch.level];
+
+            let html = '';
+
+            // Character image handling
+            const isEmoji = !ch.imagePlaceholder.includes('/') && !ch.imagePlaceholder.includes('.');
+            if (isEmoji) {
+                html += `<div class="flex items-center justify-center text-6xl py-4 select-none">${ch.imagePlaceholder}</div>`;
+            } else {
+                html += `
+                <div class="flex items-center justify-center py-2 px-2 h-40">
+                  <img src="${ch.imagePlaceholder}" alt="${ch.name}" 
+                       class="h-full w-full object-contain rounded-xl cursor-pointer hover:scale-105 transition-transform" 
+                       onclick="openModal('${ch.imagePlaceholder}')"
+                       onerror="this.outerHTML='<div class=\\'text-5xl text-center py-4\\'>🎮</div>'" />
+                </div>`;
+            }
+
+            // ── Step 1: Reveal Character Name ──
+            if (!state.nameRevealed) {
+                html += `
+        <div class="px-3 pb-3">
+          <button onclick="revealName(${id})" class="w-full py-2 rounded-xl bg-violet-600/80 hover:bg-violet-500 text-sm font-semibold transition-all active:scale-95 shadow-md">
+            🔍 Reveal Character
+          </button>
+        </div>`;
+            } else {
+                // Show name
+                html += `
+        <div class="text-center px-3">
+          <p class="font-heading font-bold text-lg leading-tight">${ch.name}</p>
+        </div>`;
+
+                // Correct / Wrong for name (if not yet scored)
+                if (!state.nameScored) {
+                    html += `
+          <div class="flex gap-2 px-3 py-2">
+            <button onclick="scoreName(${id}, true)"  class="flex-1 py-1.5 rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-xs font-bold transition-all active:scale-95">✓ Correct</button>
+            <button onclick="scoreName(${id}, false)" class="flex-1 py-1.5 rounded-lg bg-rose-600/60 hover:bg-rose-500 text-xs font-bold transition-all active:scale-95">✗ Wrong</button>
+          </div>`;
+                } else {
+                    // Name scored indicator
+                    const nameIcon = state.nameCorrect ? '✓' : '✗';
+                    const nameColor = state.nameCorrect ? 'text-emerald-400' : 'text-rose-400';
+                    html += `<p class="text-center text-xs ${nameColor} font-semibold pb-1">${nameIcon} Character</p>`;
+                }
+
+                // ── Step 2: Reveal Game (only after name scored) ──
+                if (state.nameScored && !state.gameRevealed) {
+                    html += `
+          <div class="px-3 pb-3">
+            <button onclick="revealGame(${id})" class="w-full py-2 rounded-xl bg-violet-600/80 hover:bg-violet-500 text-sm font-semibold transition-all active:scale-95 shadow-md">
+              🎮 Reveal Game
+            </button>
+          </div>`;
+                }
+
+                if (state.gameRevealed) {
+                    html += `
+          <div class="text-center px-3">
+            <p class="text-violet-300 text-sm font-medium">${ch.game}</p>
+          </div>`;
+
+                    if (!state.gameScored) {
+                        html += `
+            <div class="flex gap-2 px-3 py-2">
+              <button onclick="scoreGame(${id}, true)"  class="flex-1 py-1.5 rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-xs font-bold transition-all active:scale-95">✓ Correct</button>
+              <button onclick="scoreGame(${id}, false)" class="flex-1 py-1.5 rounded-lg bg-rose-600/60 hover:bg-rose-500 text-xs font-bold transition-all active:scale-95">✗ Wrong</button>
+            </div>`;
+                    } else {
+                        const gameIcon = state.gameCorrect ? '✓' : '✗';
+                        const gameColor = state.gameCorrect ? 'text-emerald-400' : 'text-rose-400';
+                        html += `<p class="text-center text-xs ${gameColor} font-semibold pb-2">${gameIcon} Game</p>`;
+                    }
+                }
+            }
+
+            frontEl.innerHTML = html;
+        }
+
+        // ──────────────────── ACTIONS ────────────────────
+        function flipCard(id) {
+            const state = cardState[id];
+            if (state.flipped) return;
+            state.flipped = true;
+            document.getElementById(`card-${id}`).querySelector('.card-inner').classList.add('flipped');
+        }
+
+        function revealName(id) {
+            cardState[id].nameRevealed = true;
+            renderFront(id);
+        }
+
+        function scoreName(id, correct) {
+            const state = cardState[id];
+            state.nameScored = true;
+            state.nameCorrect = correct;
+            if (correct) {
+                updateBank(0.5);
+                spawnSparkle(id);
+            }
+            renderFront(id);
+        }
+
+        function revealGame(id) {
+            cardState[id].gameRevealed = true;
+            renderFront(id);
+        }
+
+        function scoreGame(id, correct) {
+            const state = cardState[id];
+            state.gameScored = true;
+            state.gameCorrect = correct;
+            if (correct) {
+                updateBank(0.5);
+                spawnSparkle(id);
+            }
+            renderFront(id);
+        }
+
+        function spawnSparkle(id) {
+            const container = document.getElementById(`card-${id}`);
+            const spark = document.createElement('div');
+            spark.className = 'sparkle-burst';
+            spark.textContent = '✨';
+            container.appendChild(spark);
+            setTimeout(() => spark.remove(), 700);
+        }
+
+        // ──────────────────── MODAL ACTIONS ────────────────────
+        function openModal(src) {
+            const modal = $('#image-modal');
+            const img = $('#modal-img');
+            img.src = src;
+            modal.classList.add('open');
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+        }
+
+        function closeModal() {
+            const modal = $('#image-modal');
+            modal.classList.remove('open');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+
+        // ──────────────────── BUILD CARDS ────────────────────
+        function buildCards() {
+            const grids = {
+                Easy: document.getElementById('grid-easy'),
+                Medium: document.getElementById('grid-medium'),
+                Hard: document.getElementById('grid-hard'),
+            };
+            let counters = { Easy: 0, Medium: 0, Hard: 0 };
+
+            characters.forEach(ch => {
+                counters[ch.level]++;
+                const num = counters[ch.level];
+                const theme = levelTheme[ch.level];
+
+                // Init state
+                cardState[ch.id] = { flipped: false, nameRevealed: false, gameRevealed: false, nameScored: false, gameScored: false, nameCorrect: false, gameCorrect: false };
+
+                const card = document.createElement('div');
+                card.id = `card-${ch.id}`;
+                card.className = 'card-container relative';
+                card.style.height = '320px';
+
+                card.innerHTML = `
+        <div class="card-inner w-full h-full">
+          <!-- BACK -->
+          <div class="card-face card-back bg-gradient-to-br ${theme.bg} ${theme.border} border-2 flex flex-col items-center justify-center cursor-pointer select-none shadow-xl hover:shadow-2xl transition-shadow"
+               onclick="flipCard(${ch.id})">
+            <div class="text-5xl mb-3 opacity-60">${theme.pattern}</div>
+            <span class="inline-block px-3 py-0.5 rounded-full ${theme.badge} text-xs font-bold tracking-wider uppercase mb-1">${ch.level}</span>
+            <span class="text-white/50 text-sm font-medium">#${num}</span>
+          </div>
+          <!-- FRONT -->
+          <div id="front-${ch.id}" class="card-face card-front bg-gradient-to-br from-[#2d1b4e] to-[#1a1035] border-2 border-violet-700/40 flex flex-col justify-center shadow-xl">
+          </div>
+        </div>`;
+
+                grids[ch.level].appendChild(card);
+                renderFront(ch.id);
+            });
+        }
+
+        // ──────────────────── FLOATING HEARTS ────────────────────
+        function initHearts() {
+            const container = document.getElementById('hearts-bg');
+            const emojis = ['💜', '💕', '🎮', '🕹️', '💗', '✨'];
+            for (let i = 0; i < 18; i++) {
+                const heart = document.createElement('div');
+                heart.className = 'floating-heart';
+                heart.textContent = emojis[i % emojis.length];
+                heart.style.left = Math.random() * 100 + '%';
+                heart.style.animationDuration = (12 + Math.random() * 18) + 's';
+                heart.style.animationDelay = (Math.random() * 15) + 's';
+                heart.style.opacity = '0.5';
+                heart.style.fontSize = (1 + Math.random()) + 'rem';
+                container.appendChild(heart);
+            }
+        }
+
+        // ──────────────────── INIT ────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            buildCards();
+            initHearts();
+        });
+    </script>
+</body>
+
+</html>
